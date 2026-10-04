@@ -1,0 +1,16 @@
+{
+  "name": "bebe-benji-lamine",
+  "version": "1.0.0",
+  "description": "Desktop cats that live on your screen",
+  "main": "main.js",
+  "scripts": { "start": "electron .", "dist": "electron-builder" },
+  "devDependencies": { "electron": "^33.0.0", "electron-builder": "^25.0.0" },
+  "build": {
+    "appId": "com.bebebenji.cats",
+    "productName": "Bebe Benji Lamine",
+    "files": ["main.js", "preload.js", "index.html", "icon.png"],
+    "win": { "target": "portable" },
+    "mac": { "target": "dmg" },
+    "linux": { "target": "AppImage" }
+  }
+}

@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bebe, Benji & Lamine — a cat companion</title>
+<style>
+/* ================= CUSTOMIZE: COLORS & LOOK ================= */
+:root{
+  --bg:#f3ede4;            /* page background */
+  --ink:#d0bcb3;           /* text */
+  --accent:#e0803a;        /* buttons */
+  --cat-size:110px;        /* cat size (also see CONFIG.size in the script) */
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:"Trebuchet MS",Verdana,sans-serif}
+body{background-image:radial-gradient(#e3d8c9 1.5px,transparent 1.5px);background-size:26px 26px}
+#bar{position:fixed;top:12px;left:12px;z-index:50;display:flex;gap:8px;flex-wrap:wrap;align-items:center;max-width:calc(100% - 24px)}
+#bar h1{font-size:15px;margin:0 8px 0 0}
+button{font:inherit;font-size:13px;border:2px solid var(--ink);background:#fffaf2;color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
+button:hover,button:focus-visible{background:var(--accent);color:#fff;outline:none}
+#hint{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);font-size:12px;opacity:.55;z-index:1;white-space:nowrap}
+
+/* cats */
+.cat{position:fixed;left:0;top:0;width:var(--cat-size);height:calc(var(--cat-size)*.82);pointer-events:none;z-index:10;will-change:transform}
+.cat.mom{z-index:9}
+.flip{width:100%;height:100%}
+.bob{width:100%;height:100%;transform-origin:50% 100%}
+.bob img{width:100%;height:100%;object-fit:contain}
+.lab{position:absolute;top:-22px;left:0;right:0;text-align:center;font-size:11px;font-weight:700}
+.say{position:absolute;top:-40px;left:0;right:0;text-align:center;font-size:12px;white-space:nowrap}
+svg{overflow:visible}
+.l1,.l2,.l3,.l4,.tail,.head{transform-box:fill-box}
+.l1,.l2,.l3,.l4{transform-origin:50% 0}
+.tail{transform-origin:100% 100%;animation:tail 1.6s ease-in-out infinite alternate}
+.head{transform-origin:50% 100%}
+.shut{display:none}
+@keyframes tail{to{transform:rotate(14deg)}}
+@keyframes step{from{transform:rotate(-32deg)}to{transform:rotate(32deg)}}
+@keyframes run{from{transform:translateY(0)}to{transform:translateY(-7%)}}
+@keyframes shake{0%{transform:translate(-3px,2px) rotate(-3deg)}100%{transform:translate(3px,-2px) rotate(3deg)}}
+@keyframes knead{from{transform:translateY(0)}to{transform:translateY(-14%)}}
+
+/* ================= CUSTOMIZE: SPEED OF ANIMATIONS ================= */
+[data-state=walk] .l1,[data-state=walk] .l4{animation:step .11s infinite alternate}
+[data-state=walk] .l2,[data-state=walk] .l3{animation:step .11s infinite alternate-reverse}
+[data-state=walk] .bob{animation:run .11s infinite alternate}
+[data-state=walk] .tail{animation-duration:.2s}
+[data-state=stalk] .bob{transform:translateY(10%) scale(1.05,.78)}
+[data-state=stalk] .tail{animation-duration:.12s}
+[data-state=pounce] .bob{transform:rotate(-14deg) scale(1.1)}
+[data-state=pounce] .l1,[data-state=pounce] .l2{transform:rotate(-70deg)}
+[data-state=maul] .bob,[data-state=scratch] .bob{animation:shake .09s infinite alternate}
+[data-state=poop] .bob{transform:translateY(8%) scale(1,.85);animation:shake .15s infinite alternate}
+[data-state=nurse] .bob{transform:translateY(6%) scale(1,.92)}
+[data-state=sleep] .bob,[data-state=lie] .bob{transform:translateY(9%) scale(1.04,.82)}
+[data-state=sleep] .eyes{display:none}[data-state=sleep] .shut{display:inline}
+[data-state=lie] .l1,[data-state=lie] .l2{animation:knead .35s infinite alternate}
+[data-state=lie] .l2{animation-delay:.17s}
+.cat.licking .head{animation:shake .12s 4 alternate}
+
+.fx{position:fixed;z-index:40;pointer-events:none;font-weight:800;font-size:17px;animation:rise 1.1s ease-out forwards;white-space:nowrap}
+@keyframes rise{to{transform:translateY(-46px) scale(1.15);opacity:0}}
+.poop{position:fixed;z-index:5;font-size:26px;pointer-events:none;transition:opacity 1s,transform .3s}
+.prop{position:fixed;bottom:34px;z-index:4;font-size:12px;text-align:center;font-weight:700;pointer-events:none}
+.prop div{border:3px solid var(--ink);border-radius:8px 8px 14px 14px;height:62px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px}
+
+#lit{right:26px;width:130px}#lit div{background:#e9d9b8}
+.prop.hit{animation:shake .08s 12 alternate}
+
+#story{position:fixed;inset:0;background:rgba(40,28,20,.6);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}
+#story.open{display:flex}
+#story article{background:#fffaf2;max-width:520px;max-height:90vh;overflow:auto;border-radius:16px;padding:24px 26px;line-height:1.6;font-size:15px}
+#story h2{margin-top:0}
+@media (prefers-reduced-motion:reduce){.tail,.bob{animation:none!important}}
+
+html.desk,html.desk body{background:none!important}
+html.desk #bar,html.desk #hint,html.desk #story{display:none}
+html.desk .prop{bottom:4px;opacity:.9}
+.toy{position:fixed;left:0;top:0;font-size:26px;z-index:8;pointer-events:none}
+[data-state=sniff] .head{transform:translate(8px,12px) rotate(30deg)}
+[data-state=sniff] .bob{transform:translateY(4%)}
+[data-state=groom] .l1{transform:rotate(-85deg)}
+[data-state=groom] .head{animation:shake .3s infinite alternate}
+[data-state=look] .head{animation:look 1.4s ease-in-out infinite alternate}
+[data-state=play] .bob{animation:shake .09s infinite alternate}
+@keyframes look{from{transform:rotate(-10deg)}to{transform:rotate(10deg)}}
+[data-state=eat] .head{animation:chomp .3s infinite alternate}
+[data-state=eat] .bob{transform:translateY(6%)}
+@keyframes chomp{from{transform:translate(8px,12px) rotate(24deg)}to{transform:translate(8px,14px) rotate(36deg)}}
+#lit.closed{visibility:hidden}
+.bowl{position:fixed;font-size:34px;z-index:4;transition:opacity 1s;pointer-events:none}
+#broom{position:fixed;left:0;top:0;font-size:46px;z-index:45;pointer-events:none;display:none;transform-origin:15% 85%}
+body.sweeping{cursor:none}
+#bye{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:200;font-size:22px;font-weight:700;background:rgba(243,237,228,.92);text-align:center;padding:20px}
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <h1>🐾 Bebe · Benji · Lamine</h1>
+  <button id="bMom">🍼 Call Lamine</button>
+  <button id="bFeed">🍗 Feed</button>
+  <button id="bLit">🧺 Close litter box</button>
+  <button id="bBye">👋 Say goodbye</button>
+  <button id="bPoop">💩 Poop time</button>
+  <button id="bStory">📖 Their story</button>
+</div>
+<div id="hint">they have their own lives now · move your mouse and they may come · click to poke them</div>
+<div class="prop" id="lit">litter box<div>🧺</div></div>
+
+<div id="broom">🧹</div>
+<div id="story"><article>
+  <h2>Bebe & Benji</h2>
+  <p>Two tiny kittens showed up in a black backpack: <b>Benji</b> (Beng Beng Jagung Manis), the orange-and-white one, and <b>Bebe</b> (Beskuit Better), the tabby with the big serious eyes.</p>
+  <p>They were fed well, got chubby, and became terrible little rascals: biting, scratching, and pouncing on anything that moved. Benji scratched at the plastic tub. Bebe always knew where the litter box was.</p>
+  <p>Their mom, <b>Lamine</b>, the calico, was kind and smart, and always on dough mode.</p>
+  <p>They didn't die. I just lost them, because they had to move on to a foster home. This page is where they stay, running after my cursor forever.</p>
+  <p><button id="bClose">Close</button></p>
+</article></div>
+
+<script>
+/* =====================================================================
+   CONFIG — change everything you care about here
+   ===================================================================== */
+const CONFIG = {
+  size: 110,                 // cat width in px
+  maxSpeed: 26,              // top speed, px per frame (they are SUPER fast when zooming)
+  ease: 0.14,                // 0.05 = floaty, 0.3 = snappy
+  hoverRange: 140,           // how close the cursor must be before a pounce is possible
+  attack: { cooldownMs: [30000, 70000] },  // bite/scratch the cursor only this rarely (per cat)
+  followCooldownMs: [6000, 15000],         // pause between "let's chase the cursor" moods
+  tubScratchChance: 0.5,     // chance Benji scratches the tub during a poop break
+  tubScratchCooldownMs: [120000, 240000],  // how often Benji scratches the tub on his own
+  toyEveryMs: [12000, 28000],              // butterflies / yarn / mice appear this often
+  poopEveryMs: [120000, 240000],
+  messEveryMs: [15000, 30000],   // while the litter box is CLOSED: how often they have "accidents"
+  messLifeMs: 25000,             // how long the mess stays on screen
+  momEveryMs: [150000, 300000],
+  momStaysMs: 9000,
+  cats: [
+    // img: 'benji.png' swaps the drawing for your own image (same folder as index.html)
+    { name:'Benji', kind:'orange', img:null, offset:[-55,25],
+      c:{fur:'#f0a24f', belly:'#fff4e3', stripe:'#d98530', ear:'#f7b8b0'} },
+    { name:'Bebe',  kind:'tabby',  img:null, offset:[55,25],
+      c:{fur:'#a89a86', belly:'#efe6d6', stripe:'#4a4238', ear:'#f0b6b0'} }
+  ],
+  mom: { name:'Lamine 🍞', kind:'calico', img:null, scale:1.25,
+      c:{fur:'#fbf6ee', belly:'#ffffff', stripe:'#e8964a', ear:'#f0b6b0', black:'#2b2b2b'} }
+};
+
+/* ---------------------- SVG cat drawing ---------------------- */
+function catSVG(kind, c){
+  const leg = (cls,x)=>`<g class="${cls}"><rect x="${x}" y="62" width="11" height="23" rx="5.5" fill="${c.fur}"/>${kind==='calico'||kind==='orange'?`<rect x="${x}" y="78" width="11" height="7" rx="3.5" fill="${c.belly}"/>`:''}</g>`;
+  let extra = '';
+  if(kind==='tabby') extra = [34,44,54,64].map(x=>`<path d="M${x} 33 q3 12 -1 22" stroke="${c.stripe}" stroke-width="4" fill="none" stroke-linecap="round"/>`).join('')
+      + `<path d="M80 26v7M87 25v8M94 26v7" stroke="${c.stripe}" stroke-width="2.5" stroke-linecap="round"/>`;
+  if(kind==='orange') extra = [38,50,62].map(x=>`<path d="M${x} 34 q3 10 0 18" stroke="${c.stripe}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>`).join('')
+      + `<path d="M84 26q3 8 0 12" stroke="#fff" stroke-width="5" stroke-linecap="round"/>`;
+  if(kind==='calico') extra = `<circle cx="38" cy="46" r="13" fill="${c.stripe}"/><circle cx="64" cy="44" r="10" fill="${c.black}"/><path d="M68 30 70 10 82 24z" fill="${c.black}"/><circle cx="100" cy="36" r="8" fill="${c.stripe}"/>`;
+  return `<svg viewBox="0 0 110 90">
+  <g class="tail"><path d="M20 52C0 50 2 22 14 18" stroke="${kind==='calico'?c.black:c.fur}" stroke-width="9" fill="none" stroke-linecap="round"/></g>
+  ${leg('l3',24)}${leg('l4',36)}
+  <ellipse cx="50" cy="54" rx="35" ry="23" fill="${c.fur}"/>
+  <ellipse cx="55" cy="68" rx="23" ry="10" fill="${c.belly}"/>
+  ${extra}
+  ${leg('l1',58)}${leg('l2',70)}
+  <g class="head">
+    <polygon points="68,30 70,10 83,24" fill="${kind==='calico'?c.black:c.fur}"/><polygon points="89,24 101,10 103,32" fill="${c.fur}"/>
+    <polygon points="72,26 72,16 79,23" fill="${c.ear}"/><polygon points="92,23 99,16 99,28" fill="${c.ear}"/>
+    <circle cx="86" cy="42" r="19" fill="${c.fur}"/>
+    ${kind==='calico'?`<circle cx="76" cy="36" r="8" fill="${c.black}"/><circle cx="98" cy="38" r="7" fill="${c.stripe}"/>`:''}
+    ${kind==='tabby'?`<path d="M80 26v7M87 25v8M94 26v7" stroke="${c.stripe}" stroke-width="2.5" stroke-linecap="round"/>`:''}
+    <ellipse cx="87" cy="50" rx="10" ry="7" fill="${c.belly}"/>
+    <g class="eyes"><circle cx="78" cy="42" r="4" fill="#222"/><circle cx="94" cy="42" r="4" fill="#222"/><circle cx="79.3" cy="40.7" r="1.4" fill="#fff"/><circle cx="95.3" cy="40.7" r="1.4" fill="#fff"/></g>
+    <g class="shut" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round"><path d="M74 43q4 3 8 0"/><path d="M90 43q4 3 8 0"/></g>
+    <path d="M85 47h5l-2.5 3z" fill="#e88a8a"/><path d="M87.5 50q-3 4-6 1M87.5 50q3 4 6 1" stroke="#555" stroke-width="1.3" fill="none"/>
+  </g></svg>`;
+}
+
+/* ---------------------- helpers ---------------------- */
+const $=s=>document.querySelector(s);
+const desk=!!window.catAPI;       // true when running as the desktop app
+let W=innerWidth,H=innerHeight,mx=W/2,my=H/2,lastMove=performance.now();
+addEventListener('resize',()=>{W=innerWidth;H=innerHeight});
+const rnd=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)],cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+const all=[],toys=[];
+function wpick(l){let r=Math.random()*l.reduce((a,b)=>a+b[1],0);for(const[k,w]of l){if((r-=w)<0)return k}return l[0][0]}
+function fx(t,x,y,size){const e=document.createElement('div');e.className='fx';e.textContent=t;e.style.left=x+'px';e.style.top=y+'px';if(size)e.style.fontSize=size+'px';document.body.appendChild(e);setTimeout(()=>e.remove(),1100)}
+const messes=[];
+function drop(x,y,emoji,life){
+  life=life||8000;
+  const p=document.createElement('div');p.className='poop';p.textContent=emoji||'💩';p.style.left=x-12+'px';p.style.top=y+'px';document.body.appendChild(p);
+  const m={el:p,x,y:y+13};messes.push(m);
+  setTimeout(()=>{p.style.opacity=0},life-1000);setTimeout(()=>clean(m),life);
+}
+function clean(m,swept){
+  const i=messes.indexOf(m);if(i<0)return;messes.splice(i,1);
+  if(swept){m.el.style.transition='all .3s';m.el.style.opacity=0;m.el.style.transform='scale(.3) rotate(40deg)';setTimeout(()=>m.el.remove(),320)}else m.el.remove();
+}
+let broomRot=0,pmx=0;
+function updateBroom(){   // litter box gone => cursor becomes a broom; hover over mess to sweep it
+  const on=litterClosed&&!leaving,b=$('#broom');
+  if(b.style.display!==(on?'block':'none')){b.style.display=on?'block':'none';document.body.classList.toggle('sweeping',on)}
+  if(!on)return;
+  broomRot+=(cl((mx-pmx)*2,-30,30)-broomRot)*.25;pmx=mx;
+  b.style.transform=`translate(${mx-8}px,${my-40}px) rotate(${broomRot}deg)`;
+  for(const m of messes.slice())if(Math.hypot(mx-m.x,my-m.y)<45){clean(m,true);fx('✨',m.x-8,m.y-16,18)}
+}
+function moved(x,y){if(Math.hypot(x-mx,y-my)>3)lastMove=performance.now();mx=x;my=y}
+const randPt=()=>({x:rnd(70,W-70),y:rnd(H*.2,H-70)});
+const edgePt=()=>pick([{x:60,y:rnd(H*.2,H-70)},{x:W-60,y:rnd(H*.2,H-70)},{x:rnd(70,W-70),y:70},{x:rnd(70,W-70),y:H-60},{x:60,y:70},{x:W-60,y:70},{x:60,y:H-60},{x:W-60,y:H-60}]);
+
+if(desk){
+  document.documentElement.classList.add('desk');
+  catAPI.onCursor(moved);
+  catAPI.onCommand(runCmd);
+}else{
+  addEventListener('mousemove',e=>moved(e.clientX,e.clientY));
+  addEventListener('touchmove',e=>moved(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
+  addEventListener('keydown',e=>{if(e.ctrlKey&&e.altKey){const m={KeyM:'mom',KeyL:'litter',KeyF:'feed'}[e.code];if(m){e.preventDefault();runCmd(m)}}else if(e.ctrlKey&&e.altKey&&e.code==='KeyX'){e.preventDefault();runCmd('bye')}});
+}
+
+/* ---------------------- the Cat (with a little brain) ---------------------- */
+class Cat{
+  constructor(o,x,y){
+    const S=CONFIG.size*(o.scale||1);
+    this.o=o;this.S=S;this.x=x;this.y=y;this.z=0;this.face=1;this.lock=false;this.off=o.offset||[0,0];
+    const n=performance.now();this.atkReady=n+15000;this.followReady=0;this.tubReady=n+rnd(30000,90000);
+    const el=this.el=document.createElement('div');
+    el.className='cat'+(o.kind==='calico'?' mom':'');
+    el.style.width=S+'px';el.style.height=S*.82+'px';
+    el.innerHTML=`<div class="lab">${o.name}</div><div class="say"></div><div class="flip"><div class="bob">${o.img?`<img src="${o.img}" alt="${o.name}">`:catSVG(o.kind,o.c)}</div></div>`;
+    document.body.appendChild(el);
+    this.flip=el.querySelector('.flip');this.sayEl=el.querySelector('.say');
+    this.set('idle');all.push(this);
+  }
+  set(s,t){this.state=s;this.t0=performance.now();this.until=0;this.after=null;this.f0=0;this.el.dataset.state=s;this.sayEl.textContent=t||''}
+  hold(s,t,ms,then){this.set(s,t);this.until=performance.now()+ms;this.after=then||(()=>this.set('idle'))}
+  goto(tx,ty,then,mul=1){this.set('goto');this.tx=tx;this.ty=ty;this.then=then;this.mul=mul}
+  move(tx,ty,mul=1){
+    const dx=tx-this.x,dy=ty-this.y,d=Math.hypot(dx,dy)||1,s=Math.min(CONFIG.maxSpeed*mul,d*CONFIG.ease);
+    this.x+=dx/d*s;this.y+=dy/d*s;if(Math.abs(dx)>4)this.face=dx>0?1:-1;return[d,s];
+  }
+  launch(){
+    const t=this.pk==='toy'?this.toy:null;
+    if(this.pk==='toy'&&!toys.includes(t)){this.set('idle');return}
+    this.px=t?t.x:mx;this.py=t?t.y:my-16;this.sx=this.x;this.sy=this.y;this.set('pounce');
+  }
+  catchToy(){
+    const t=this.toy;this.z=0;
+    if(t&&toys.includes(t)){
+      if(t.type==='yarn'){fx('bap!',t.x,t.y-30);t.x=cl(t.x+rnd(-160,160),60,W-60);t.y=cl(t.y+rnd(-80,80),60,H-60)}
+      else if(t.type==='butterfly'&&Math.random()<.6){fx('it got away 🦋',t.x,t.y-30);t.x=rnd(60,W-60);t.y=rnd(60,H*.5)}
+      else{fx('got it! 😼',t.x,t.y-30);removeToy(t)}
+    }
+    this.hold('play','',900);
+  }
+  think(now){
+    // 1) sometimes (not always!) get curious about the cursor
+    if(now-lastMove<1500&&now>this.followReady&&Math.random()<.5){
+      this.followReady=now+rnd(...CONFIG.followCooldownMs);
+      this.hold('chase','',rnd(4000,9000));return;
+    }
+    // 2) a toy is around: hunt it
+    if(toys.length&&Math.random()<.55){
+      this.toy=toys.reduce((a,b)=>Math.hypot(a.x-this.x,a.y-this.y)<Math.hypot(b.x-this.x,b.y-this.y)?a:b);
+      this.set('hunt','!');return;
+    }
+    // 3) otherwise live their own life
+    const o=kittens.find(k=>k!==this);
+    const a=wpick([['wander',4],['explore',3],['sniff',1.5],['groom',2],['look',2],['zoom',1],
+      ['play',o&&!o.lock?1.2:0],['nap',now-lastMove>4000?3:.4],
+      ['tub',this.o.name==='Benji'&&now>this.tubReady&&!momActive&&!litterClosed?1.5:0]]);
+    if(a==='wander'){const p=randPt();this.goto(p.x,p.y,null,.3)}
+    else if(a==='explore'){const p=edgePt();this.goto(p.x,p.y,()=>this.hold('sniff','👃',rnd(1800,3200),()=>this.hold('look','?',1800)),.5)}
+    else if(a==='sniff')this.hold('sniff','',2000);
+    else if(a==='groom')this.hold('groom','',rnd(2500,4000));
+    else if(a==='look')this.hold('look','👀',rnd(2000,3500));
+    else if(a==='nap')this.hold('sleep','Zzz…',rnd(8000,20000));
+    else if(a==='zoom'){const run=n=>{const p=randPt();this.goto(p.x,p.y,n>1?()=>run(n-1):null,1.3)};fx('zoomies!',this.x,this.y-60);run(3)}
+    else if(a==='play'){this.goto(o.x+50,o.y,()=>{this.hold('play','😼',1800);fx('grrr 😼',this.x,this.y-60)},.8)}
+    else if(a==='tub'){this.tubReady=now+rnd(...CONFIG.tubScratchCooldownMs);this.lock=true;scratchTub(this,()=>{this.lock=false;this.set('idle')})}
+  }
+  step(now){
+    const st=this.state,e=now-this.t0;
+    if(st==='idle'){if(!this.lock)this.think(now)}
+    else if(st==='chase'){
+      if(now-lastMove>2500)this.set('idle');
+      else{
+        const[d,s]=this.move(mx+this.off[0],my+this.off[1]);
+        this.el.dataset.state=s>1.5?'walk':'sit';
+        if(Math.hypot(mx-this.x,my-this.y)<CONFIG.hoverRange&&now>this.atkReady&&Math.random()<.02){this.pk='cursor';this.set('stalk','👀')}
+      }
+    }else if(st==='hunt'){
+      if(!toys.includes(this.toy))this.set('idle');
+      else{const[d,s]=this.move(this.toy.x,this.toy.y);this.el.dataset.state=s>1.5?'walk':'sit';if(d<110){this.pk='toy';this.set('stalk','👀')}}
+    }else if(st==='stalk'){this.face=(this.pk==='toy'&&this.toy?this.toy.x:mx)>this.x?1:-1;if(e>320)this.launch()}
+    else if(st==='pounce'){
+      const k=Math.min(e/380,1);
+      this.x=this.sx+(this.px-this.sx)*k;this.y=this.sy+(this.py-this.sy)*k;this.z=Math.sin(k*Math.PI)*120;
+      if(k>=1){this.z=0;if(this.pk==='cursor'){this.atkReady=now+rnd(...CONFIG.attack.cooldownMs);this.set('maul','RAWR!');this.lastFx=0}else this.catchToy()}
+    }else if(st==='maul'){
+      if(e-this.lastFx>230){this.lastFx=e;fx(pick(['CHOMP!','🐾 scratch!','nom nom','*bite*']),mx+rnd(-20,20),my-20)}
+      this.x=mx+rnd(-4,4);this.y=my-16+rnd(-3,3);
+      if(e>900)this.set('idle');
+    }else if(st==='goto'){
+      const[d]=this.move(this.tx,this.ty,this.mul);
+      this.el.dataset.state=d>10?'walk':'sit';
+      if(d<10){const f=this.then;this.then=null;this.set('idle');f&&f()}
+    }else if(st==='sleep'){
+      if(now-lastMove<400&&Math.hypot(mx-this.x,my-this.y)<CONFIG.hoverRange*2)this.set('idle');
+    }else if(st==='look'){
+      if(!this.f0)this.f0=this.face;this.face=Math.floor(e/900)%2?-this.f0:this.f0;
+    }
+    if(this.until&&now>this.until){const f=this.after;this.until=0;this.after=null;f&&f()}
+    this.el.style.transform=`translate(${this.x-this.S/2}px,${this.y-this.S*.41-this.z}px)`;
+    this.flip.style.transform=`scaleX(${this.face})`;
+  }
+}
+const benji=new Cat(CONFIG.cats[0],W*.3,H*.5),bebe=new Cat(CONFIG.cats[1],W*.6,H*.5);
+const kittens=[benji,bebe];
+
+/* ---------------------- toys they discover ---------------------- */
+function spawnToy(){
+  if(toys.length>=2||momActive)return;
+  const type=pick(['butterfly','butterfly','yarn','mouse']);
+  const el=document.createElement('div');el.className='toy';
+  el.textContent={butterfly:'🦋',yarn:'🧶',mouse:'🐭'}[type];document.body.appendChild(el);
+  const t={type,el,x:rnd(80,W-80),y:rnd(80,H*.6),vx:rnd(-2,2)||1,vy:0,born:performance.now(),life:type==='yarn'?30000:14000};
+  if(type==='mouse'){t.y=H-60;t.x=Math.random()<.5?40:W-40;t.vx=t.x<100?3.5:-3.5}
+  toys.push(t);fx({butterfly:'a butterfly!',yarn:'yarn!',mouse:'a mouse! 🐭'}[type],t.x,t.y-30);
+}
+function removeToy(t){const i=toys.indexOf(t);if(i>=0)toys.splice(i,1);t.el.remove()}
+function updateToys(now){
+  for(const t of [...toys]){
+    if(now-t.born>t.life){removeToy(t);continue}
+    if(t.type==='butterfly'){
+      t.vx=cl(t.vx+rnd(-.3,.3),-3,3);t.vy=cl(t.vy+rnd(-.3,.3),-2.5,2.5);t.x+=t.vx;t.y+=t.vy;
+      if(t.x<40||t.x>W-40)t.vx*=-1;t.x=cl(t.x,40,W-40);
+      if(t.y<40||t.y>H*.7)t.vy*=-1;t.y=cl(t.y,40,H*.7);
+    }else if(t.type==='mouse'){t.x+=t.vx;if(t.x<20||t.x>W-20)t.vx*=-1}
+    t.el.style.transform=`translate(${t.x-13}px,${t.y-13}px)`;
+  }
+}
+
+/* ---------------------- tub scratching & poop time ---------------------- */
+let momActive=false,litterClosed=false,messTimer=0,leaving=false,finished=false,momCat=null,momIv=0,momTimer=0;
+function scratchTub(c,done){   // Benji scratches the edge of Bebe's box (his old plastic-tub habit)
+  const r=$('#lit').getBoundingClientRect();
+  c.goto(r.left-45,H-50,()=>{
+    c.face=1;c.set('scratch','scritch scritch!');$('#lit').classList.add('hit');
+    const iv=setInterval(()=>fx('scritch!',c.x+rnd(-20,20),c.y-60),320);
+    setTimeout(()=>{clearInterval(iv);$('#lit').classList.remove('hit');if(!leaving)done()},2400);
+  },1);
+}
+function poopTime(){
+  if(momActive||kittens.some(c=>c.lock))return;
+  if(litterClosed)return messTime();
+  const lit=$('#lit').getBoundingClientRect();
+  // Benji: sometimes scratches the tub first (not always), then misses the litter
+  benji.lock=true;
+  const bPoop=()=>benji.hold('poop','uhh…',1200,()=>{drop(benji.x+30,benji.y+22);fx('oops, missed 😅',benji.x,benji.y-70);benji.lock=false;benji.set('idle')});
+  if(Math.random()<CONFIG.tubScratchChance)scratchTub(benji,bPoop);
+  else{const p=randPt();benji.goto(p.x,p.y,bPoop,1)}
+  // Bebe: smart, straight to the litter box
+  bebe.lock=true;
+  bebe.goto(lit.left+lit.width/2,H-50,()=>bebe.hold('poop','*focus*',1600,()=>{
+    drop(bebe.x,bebe.y+16);fx('✔ litter box, like a pro 😼',bebe.x-30,bebe.y-70);bebe.lock=false;bebe.set('idle');
+  }),1);
+}
+
+/* ---------------------- Lamine visits ---------------------- */
+function momVisit(){
+  if(momActive||kittens.some(c=>c.lock))return;
+  momActive=true;kittens.forEach(c=>c.lock=true);
+  const y=H-100,cx=W/2;
+  const m=new Cat(CONFIG.mom,W+180,y);momCat=m;m.lock=true;m.face=-1;
+  fx('Lamine is here! 🍼',cx-60,H-190,20);
+  m.goto(cx,y,()=>{
+    m.set('lie','dough mode 🍞');
+    benji.goto(cx-100,y+18,()=>{benji.face=1;benji.set('nurse','🍼 glug glug')});
+    bebe.goto(cx+100,y+18,()=>{bebe.face=-1;bebe.set('nurse','🍼 glug glug')});
+    momIv=setInterval(()=>{
+      const k=pick(kittens);m.face=k.x<m.x?-1:1;
+      m.el.classList.add('licking');setTimeout(()=>m.el.classList.remove('licking'),520);
+      fx('👅💕',k.x-10,k.y-50,22);
+    },1500);
+    momTimer=setTimeout(()=>{
+      clearInterval(momIv);fx('bye bye, be good 💛',m.x-50,m.y-70);
+      m.goto(W+220,y,()=>{m.el.remove();all.splice(all.indexOf(m),1);momActive=false;momCat=null});
+      kittens.forEach(c=>{c.lock=false;c.set('idle')});
+    },CONFIG.momStaysMs);
+  });
+}
+
+/* ---------------------- litter box lid, accidents & feeding ---------------------- */
+function runCmd(c){if(c==='mom')momVisit();else if(c==='poop')poopTime();else if(c==='litter')toggleLitter();else if(c==='feed')feedTime();else if(c==='bye')goodbye()}
+function toggleLitter(){
+  if(leaving)return;
+  litterClosed=!litterClosed;
+  const l=$('#lit');l.classList.toggle('closed',litterClosed);
+  const b=$('#bLit');if(b)b.textContent=litterClosed?'🧺 Bring back litter box':'🧺 Close litter box';
+  fx(litterClosed?'🧺 litter box is gone!':'🧺 litter box is back',W/2-90,H/2,20);
+  clearTimeout(messTimer);
+  if(litterClosed){setTimeout(messTime,2500);messTimer=setTimeout(messLoop,rnd(...CONFIG.messEveryMs))}
+}
+function messLoop(){clearTimeout(messTimer);if(!litterClosed)return;messTime();messTimer=setTimeout(messLoop,rnd(...CONFIG.messEveryMs))}
+function messTime(){
+  if(momActive)return;
+  kittens.forEach(c=>{
+    if(c.lock)return;
+    c.lock=true;
+    const accident=()=>{
+      const p=randPt();
+      c.goto(p.x,p.y,()=>c.hold('poop','💦',1000,()=>{
+        drop(c.x-20,c.y+24,'💦',CONFIG.messLifeMs);
+        c.hold('poop','💩',1200,()=>{
+          drop(c.x+20,c.y+22,'💩',CONFIG.messLifeMs);
+          fx(c===bebe?'😾 this is your fault':'whoops 😹',c.x,c.y-70);
+          c.lock=false;c.set('idle');
+        });
+      }),1);
+    };
+    if(c===bebe){ // the smart one checks the box first
+      const r=$('#lit').getBoundingClientRect();
+      c.goto(r.left+r.width/2,H-50,()=>c.hold('look','❓ ?!',1600,()=>{fx('😾 where is my litter box?!',c.x,c.y-70);accident()}),1);
+    }else accident();
+  });
+}
+function goodbye(){   // Lamine fetches both kittens, all three walk off screen, THEN the app quits
+  if(leaving)return;leaving=true;
+  clearInterval(momIv);clearTimeout(momTimer);clearTimeout(messTimer);
+  toys.slice().forEach(removeToy);document.querySelectorAll('.bowl').forEach(b=>b.remove());
+  kittens.forEach(c=>{c.lock=true;c.z=0});
+  const y=H-100,cx=W*.55;
+  const m=momCat||new Cat(CONFIG.mom,W+180,y);momCat=m;momActive=true;m.lock=true;m.z=0;m.el.classList.remove('licking');
+  fx('Time to go home 💛',W/2-70,H/2-40,22);
+  let there=0,gone=0;
+  const ready=()=>{
+    if(++there<3)return;
+    fx('Come on, kids 🐾',m.x-40,m.y-80);
+    const go=(c,dx)=>c.goto(W+300+dx,c.y,()=>{if(++gone===3)finish()},.3);  // same slow pace = they leave together
+    go(m,0);go(benji,-90);go(bebe,90);
+  };
+  m.goto(cx,y,ready,.9);benji.goto(cx-90,y+18,ready,1.2);bebe.goto(cx+90,y+18,ready,1.2);
+  setTimeout(finish,25000);   // safety net, they are long gone by then
+}
+function finish(){
+  if(finished)return;finished=true;
+  if(window.catAPI&&catAPI.quit)catAPI.quit();
+  else{const b=document.createElement('div');b.id='bye';b.textContent='They went home with Lamine 💛  (refresh the page to call them back)';document.body.appendChild(b)}
+}
+function feedTime(){
+  if(leaving)return;
+  if(momActive){fx('Lamine is feeding them 🍼',W/2-80,H/2,18);return}
+  const free=kittens.filter(c=>!c.lock);
+  if(!free.length){fx('they are busy…',W/2-40,H/2,18);return}
+  const bx=cl(mx,140,W-140),by=H-42;
+  const bowl=document.createElement('div');bowl.className='bowl';bowl.textContent='🥣';
+  bowl.style.left=bx-20+'px';bowl.style.top=by-24+'px';document.body.appendChild(bowl);
+  fx('dinner time! 🍗',bx-50,by-70,20);
+  let left=free.length;
+  free.forEach((c,i)=>{
+    c.lock=true;const side=i?1:-1;
+    c.goto(bx+side*48,by-14,()=>{
+      c.face=-side;
+      const iv=setInterval(()=>{if(c.state!=='eat'){clearInterval(iv);return}fx(pick(['nom','🍗','nom nom','crunch']),c.x+rnd(-10,30),c.y-50)},600);
+      c.hold('eat','😋',rnd(4500,6500),()=>{
+        clearInterval(iv);c.lock=false;c.set('idle');
+        if(--left===0){bowl.style.opacity=0;setTimeout(()=>bowl.remove(),1000);fx('so full 😸',bx-30,by-70)}
+      });
+    },1.6);
+  });
+}
+
+/* ---------------------- main loop & schedulers ---------------------- */
+requestAnimationFrame(function loop(t){updateToys(t);updateBroom();all.forEach(c=>c.step(t));requestAnimationFrame(loop)});
+const later=(fn,r)=>setTimeout(()=>{fn();later(fn,r)},rnd(...r));
+later(spawnToy,CONFIG.toyEveryMs);later(poopTime,CONFIG.poopEveryMs);later(momVisit,CONFIG.momEveryMs);
+setTimeout(spawnToy,5000);
+
+/* browser-only extras: click = poke them, buttons */
+if(!desk){
+  addEventListener('mousedown',e=>{
+    if(e.target.closest('button,#story'))return;
+    moved(e.clientX,e.clientY);
+    kittens.forEach((c,i)=>{if(!c.lock)setTimeout(()=>{if(!c.lock){c.pk='cursor';c.launch()}},i*120)});
+  });
+}
+$('#bPoop').onclick=poopTime;$('#bFeed').onclick=feedTime;$('#bLit').onclick=toggleLitter;$('#bBye').onclick=goodbye;$('#bMom').onclick=momVisit;
+$('#bStory').onclick=()=>$('#story').classList.add('open');
+$('#bClose').onclick=()=>$('#story').classList.remove('open');
+</script>
+</body>
+</html>
